@@ -1,4 +1,8 @@
-# Asteria — Pure Rust Reinforcement Learning and Neural Networks
+# Asteria: Pure Rust Reinforcement Learning and Neural Networks
+
+![](https://raw.githubusercontent.com/dassarthak18/asteria/main/logo/logo.jpg)
+
+*Jupiter and Asteria* by Marco Liberi. ([Wikimedia Commons](https://upload.wikimedia.org/wikipedia/commons/3/3f/Marco_Liberi_-_Jupiter_and_Asteria_-_WGA12975.jpg))
 
 ## Table of Contents
 
