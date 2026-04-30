@@ -78,7 +78,7 @@ asteria = { path = "path/to/asteria" }
 Clone and run the bundled examples (run from the repo root):
 
 ```shell
-git clone https://github.com/dassarthak18/Coeus.git
+git clone https://github.com/dassarthak18/asteria.git
 cd Coeus
 
 # Supervised learning
