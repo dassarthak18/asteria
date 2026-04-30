@@ -59,7 +59,7 @@ fn accuracy(net: &mut NeuralNetwork, features: &[Vec<f32>], labels: &[usize]) ->
 }
 
 fn main() {
-    let (mut features, labels) = load_wine("Data/wine.dat");
+    let (mut features, labels) = load_wine("data/wine.dat");
     normalize(&mut features);
 
     // stratified 80/20 split

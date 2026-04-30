@@ -57,7 +57,7 @@ fn accuracy(net: &mut NeuralNetwork, features: &[Vec<f32>], labels: &[usize]) ->
 }
 
 fn main() {
-    let (mut features, labels) = load_iris("Data/iris.data");
+    let (mut features, labels) = load_iris("data/iris.data");
     normalize(&mut features);
 
     // stratified 80/20 split: take every 5th for test

@@ -54,10 +54,10 @@ fn accuracy(net: &mut NeuralNetwork, images: &[Vec<f32>], labels: &[usize]) -> f
 
 fn main() {
     println!("Loading MNIST...");
-    let train_images = load_images("Data/train-images-idx3-ubyte");
-    let train_labels = load_labels("Data/train-labels-idx1-ubyte");
-    let test_images  = load_images("Data/t10k-images-idx3-ubyte");
-    let test_labels  = load_labels("Data/t10k-labels-idx1-ubyte");
+    let train_images = load_images("data/train-images-idx3-ubyte");
+    let train_labels = load_labels("data/train-labels-idx1-ubyte");
+    let test_images  = load_images("data/t10k-images-idx3-ubyte");
+    let test_labels  = load_labels("data/t10k-labels-idx1-ubyte");
 
     let n_feat  = 784usize;
     let n_class = 10usize;

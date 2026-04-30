@@ -94,7 +94,7 @@ cargo run --example mountain_car
 cargo run --example cart_pole
 ```
 
-Data files (`iris.data`, `wine.dat`, four MNIST IDX binaries) are provided in `./Data/`. All examples default to paths relative to the project root.
+Data files (`iris.data`, `wine.dat`, four MNIST IDX binaries) are provided in `./data/`. All examples default to paths relative to the project root.
 
 ## Tensor Engine (CLAB)
 
