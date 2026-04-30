@@ -79,7 +79,7 @@ Clone and run the bundled examples (run from the repo root):
 
 ```shell
 git clone https://github.com/dassarthak18/asteria.git
-cd Coeus
+cd asteria
 
 # Supervised learning
 cargo run --example xor
