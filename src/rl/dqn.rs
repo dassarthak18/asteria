@@ -3,24 +3,57 @@ use crate::core::neural_network::NeuralNetwork;
 use crate::core::optimizer::Optimizer;
 use crate::rl::replay_buffer::{ReplayBuffer, MdpTransition};
 
+/// Deep Q-Network (DQN) with experience replay and a frozen target network.
+///
+/// DQN stabilises Q-learning with two techniques:
+/// - **Experience replay**: transitions are stored in a [`ReplayBuffer`] and sampled
+///   uniformly at random, breaking harmful temporal correlations in the training data.
+/// - **Target network**: a periodically-updated copy of the Q-network is used to
+///   compute Bellman targets, preventing the moving-target instability that arises
+///   when both sides of the update use the same weights.
+///
+/// The target network is hard-copied from the online network every `target_update_frequency`
+/// gradient steps.
 pub struct DQN {
+    /// Online Q-network updated every step.
     pub network: NeuralNetwork,
+    /// Optimizer used to update the online network.
     pub optimizer: Box<dyn Optimizer>,
+    /// Discount factor γ ∈ [0, 1].
     pub gamma: f32,
+    /// Experience replay buffer.
     pub memory: ReplayBuffer<MdpTransition>,
+    /// Number of transitions per mini-batch.
     pub sample_size: usize,
+    /// Frozen target network used to compute Bellman targets.
     pub critic_target: NeuralNetwork,
+    /// Number of gradient steps between hard target-network updates.
     pub target_update_frequency: usize,
+    /// Counter tracking gradient steps since the last target update.
     pub target_update_step: usize,
+    /// Batched state tensor assembled from the current replay sample.
     pub batch_state: Tensor,
+    /// Batched action tensor (one-hot) assembled from the current replay sample.
     pub batch_action: Tensor,
+    /// Batched next-state tensor assembled from the current replay sample.
     pub batch_next_state: Tensor,
+    /// Batched reward tensor (shape `[sample_size, 1]`).
     pub batch_reward: Tensor,
+    /// Batched termination mask (1.0 = non-terminal, 0.0 = terminal; shape `[sample_size, 1]`).
     pub batch_mask: Tensor,
+    /// Loss tensor from the last critic update.
     pub loss: Tensor,
 }
 
 impl DQN {
+    /// Creates a new DQN agent.
+    ///
+    /// - `network`: Q-network with one output per action.
+    /// - `optimizer`: parameter update rule.
+    /// - `gamma`: discount factor.
+    /// - `memory_size`: replay buffer capacity.
+    /// - `sample_size`: mini-batch size for each update.
+    /// - `target_update_frequency`: gradient steps between target-network hard copies.
     pub fn new(network: NeuralNetwork, optimizer: Box<dyn Optimizer>, gamma: f32, memory_size: usize, sample_size: usize, target_update_frequency: usize) -> Self {
         let critic_target = network.clone();
         DQN {
@@ -41,6 +74,10 @@ impl DQN {
         }
     }
 
+    /// Stores the transition and, once the replay buffer has enough data, performs a DQN update.
+    ///
+    /// Training only begins once `memory.len() >= sample_size`. The target network is
+    /// hard-copied every `target_update_frequency` gradient steps.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor, reward: f32, final_state: bool) {
         self.memory.add_item(MdpTransition {
             s0: state.clone(),
@@ -92,7 +129,7 @@ impl DQN {
     fn critic_loss_function(&mut self) -> Tensor {
         let q_next_values = self.critic_target.forward(&self.batch_next_state).clone();
         let n_actions = q_next_values.shape[1];
-        // max_index(0) now returns column indices (one per row)
+        // max_index(0) returns per-row column indices; convert to flat buffer offsets for gather.
         let a_max_cols = q_next_values.max_index(0);
         let a_max_flat: Vec<usize> = a_max_cols.iter().enumerate().map(|(i, &c)| i * n_actions + c).collect();
         let max_q_values = q_next_values.gather(&a_max_flat);
@@ -111,6 +148,7 @@ impl DQN {
         loss
     }
 
+    /// Returns the greedy action for `state` as a one-hot tensor (shape `[n_actions]`).
     pub fn get_action(&mut self, state: &Tensor) -> Tensor {
         let q_values = self.network.forward(state);
         let mut action = Tensor::with_shape_val(vec![q_values.shape[1]], 0.0);

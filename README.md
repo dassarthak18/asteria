@@ -38,7 +38,7 @@ Asteria began as a port of [Coeus](https://github.com/Iskandor/Coeus), a C++ rei
 The library ships:
 - A custom N-dimensional tensor engine (**CLAB**) with broadcast, matmul, gather, concat, and argmax.
 - A graph-based neural network framework with mini-batch support and topological-sort execution order.
-- Nine RL algorithms across discrete and continuous action spaces, plus two intrinsic motivation models.
+- Eleven RL algorithms across discrete and continuous action spaces, plus two intrinsic motivation models.
 - A supervised learning suite (XOR, Iris, Wine, MNIST) with up to 98% accuracy on MNIST in 10 epochs.
 
 ## What Asteria Adds over Coeus
@@ -93,6 +93,7 @@ cargo run --release --example mnist      # --release recommended; ~1 min/epoch i
 
 # Reinforcement learning
 cargo run --example maze
+cargo run --example maze_pg
 cargo run --example simple_continuous_env
 cargo run --example mountain_car
 cargo run --example cart_pole
@@ -234,18 +235,18 @@ Exploration is handled separately from the learning algorithm:
 | **Q-Learning** | Off-policy TD control: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$ |
 | **SARSA** | On-policy TD control: $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma Q(s',a') - Q(s,a)]$ |
 | **DQN** | Deep Q-Network with experience replay, target network, and periodic hard sync |
+| **AC** | Vanilla Actor-Critic: TD critic provides the advantage $\delta$ to a REINFORCE actor |
+| **A2C** | Synchronous Advantage Actor-Critic — batched rollouts with advantage $A = r + \gamma V(s') - V(s)$ |
+| **A3C** | Asynchronous A-C — worker threads compute gradients locally on thread-local network copies and push them to a shared global model protected by `Arc<Mutex<...>>` |
+| **PPO** | Proximal Policy Optimization — on-policy clipped surrogate $L^{\text{CLIP}} = \mathbb{E}[\min(r_t(\theta)A_t,\ \text{clip}(r_t(\theta),1-\varepsilon,1+\varepsilon)A_t)]$ with multiple minibatch epochs per rollout |
 | **QAC** | Q-value Actor-Critic with discrete policy gradient actor and Q-network critic |
 
 ### Continuous Action Space
 
 | Algorithm | Description |
 |---|---|
-| **AC** | Vanilla Actor-Critic: TD critic provides the advantage $\delta$ to a REINFORCE actor |
-| **A2C** | Synchronous Advantage Actor-Critic — batched rollouts with advantage $A = r + \gamma V(s') - V(s)$ |
-| **A3C** | Asynchronous A-C — worker threads compute gradients locally on thread-local network copies and push them to a shared global model protected by `Arc<Mutex<...>>` |
 | **CACLA** | Continuous Actor-Critic Learning Automaton — updates actor only when $\delta > 0$, using the regression target $(a - \mu_\theta(s))$ as the actor loss |
-| **DDPG** | Deep Deterministic Policy Gradient — off-policy actor-critic with experience replay and soft target updates $\theta' \leftarrow \tau\theta + (1-\tau)\theta'$; actor gradient via $\nabla_\theta J \approx \mathbb{E}[\nabla_a Q(s,a)|_{a=\mu_\theta(s)} \cdot \nabla_\theta\mu_\theta(s)]$ |
-| **PPO** | Proximal Policy Optimization — on-policy clipped surrogate $L^{\text{CLIP}} = \mathbb{E}[\min(r_t(\theta)A_t,\ \text{clip}(r_t(\theta),1-\varepsilon,1+\varepsilon)A_t)]$ with multiple minibatch epochs per rollout |
+| **DDPG** | Deep Deterministic Policy Gradient — off-policy actor-critic with experience replay and soft target updates $\theta' \leftarrow \tau\theta + (1-\tau)\theta'$; actor gradient via $\nabla_\theta J \approx \mathbb{E}[\nabla_a Q(s,a)\vert_{a=\mu_\theta(s)} \cdot \nabla_\theta\mu_\theta(s)]$ |
 
 ### Motivation Models
 
@@ -327,6 +328,21 @@ F  F  F  G
 | AC | 16 → 32 (ReLU) → 4 (Softmax) / 16 → 32 (ReLU) → 1 (Linear) | 0.99 | LinearDecay | ~ep 100 |
 
 All methods reach near-optimal reward (~0.95) by convergence. DQN uses a replay buffer of 10,000, batch size 64, and target network sync every 100 steps.
+
+---
+
+#### Maze Policy Gradient (`examples/maze_pg.rs`)
+
+Same 4×4 maze environment. Exercises the four policy-gradient algorithms added in Asteria. 500 training episodes, $\varepsilon$-greedy exploration decaying from 0.5 to 0.05. LR: `LinearDecay` $10^{-3} \to 10^{-4}$ over 500 episodes. A3C uses 4 parallel worker threads.
+
+| Algorithm | Architecture (actor / critic) | $\gamma$ | Notes |
+|---|---|---|---|
+| A2C | 16→32(ReLU)→4(Softmax) / 16→32(ReLU)→1(Linear) | 0.99 | Batched advantage, batch=32 |
+| QAC | 16→32(ReLU)→4(Softmax) / 16→32(ReLU)→4(Linear) | 0.99 | Q-network critic |
+| PPO | 16→32(ReLU)→4(Softmax) / 16→32(ReLU)→1(Linear) | 0.99 | ε=0.2, 4 update epochs, batch=64 |
+| A3C | 16→32(ReLU)→4(Softmax) / 16→32(ReLU)→1(Linear) | 0.99 | 4 workers, 100 episodes each |
+
+All variants converge to near-optimal policy (goal reached consistently) by episode 400.
 
 ---
 

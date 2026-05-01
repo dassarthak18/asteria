@@ -3,27 +3,65 @@ use crate::core::neural_network::NeuralNetwork;
 use crate::core::optimizer::Optimizer;
 use crate::rl::replay_buffer::{ReplayBuffer, MdpTransition};
 
+/// Deep Deterministic Policy Gradient (DDPG).
+///
+/// DDPG is an off-policy actor-critic algorithm for continuous action spaces. It combines
+/// experience replay (as in DQN) with a deterministic policy and soft target-network
+/// updates:
+///
+/// - **Critic** Q(s, a) is trained with the Bellman target
+///   `r + γ · Q_target(s', μ_target(s'))`.
+/// - **Actor** μ(s) is trained by ascending the critic's action-value gradient
+///   `∇_a Q(s, a)|_{a=μ(s)}`, propagated back through the actor via the chain rule.
+/// - **Target networks** `μ_target` and `Q_target` are updated each step with
+///   soft (Polyak) averaging: `θ_target ← τ·θ + (1−τ)·θ_target`.
 pub struct DDPG {
+    /// Online actor network μ(s).
     pub actor: NeuralNetwork,
+    /// Soft-averaged target actor μ_target(s).
     pub actor_target: NeuralNetwork,
+    /// Online critic network Q(s, a).
     pub critic: NeuralNetwork,
+    /// Soft-averaged target critic Q_target(s, a).
     pub critic_target: NeuralNetwork,
+    /// Optimizer used to update the online actor.
     pub actor_optimizer: Box<dyn Optimizer>,
+    /// Optimizer used to update the online critic.
     pub critic_optimizer: Box<dyn Optimizer>,
+    /// Discount factor γ ∈ [0, 1].
     pub gamma: f32,
+    /// Polyak averaging coefficient τ for soft target updates (typically 0.005).
     pub tau: f32,
+    /// Experience replay buffer.
     pub memory: ReplayBuffer<MdpTransition>,
+    /// Mini-batch size for each update.
     pub sample_size: usize,
+    /// Dimensionality of the state observation.
     pub state_dim: usize,
+    /// Dimensionality of the continuous action space.
     pub action_dim: usize,
+    /// Batched state tensor assembled from the current replay sample.
     pub batch_state: Tensor,
+    /// Batched action tensor assembled from the current replay sample.
     pub batch_action: Tensor,
+    /// Batched next-state tensor assembled from the current replay sample.
     pub batch_next_state: Tensor,
+    /// Batched reward tensor (shape `[sample_size, 1]`).
     pub batch_reward: Tensor,
+    /// Batched termination mask (1.0 = non-terminal, 0.0 = terminal; shape `[sample_size, 1]`).
     pub batch_mask: Tensor,
 }
 
 impl DDPG {
+    /// Creates a new DDPG agent.
+    ///
+    /// - `actor` / `actor_optimizer`: deterministic policy network and its update rule.
+    /// - `critic` / `critic_optimizer`: Q-network (takes concatenated `[state, action]` input) and its update rule.
+    /// - `gamma`: discount factor.
+    /// - `memory_size`: replay buffer capacity.
+    /// - `sample_size`: mini-batch size.
+    /// - `tau`: Polyak coefficient for soft target updates.
+    /// - `state_dim` / `action_dim`: used to split the gradient flowing back from the critic to the actor.
     pub fn new(
         actor: NeuralNetwork,
         actor_optimizer: Box<dyn Optimizer>,
@@ -59,10 +97,18 @@ impl DDPG {
         }
     }
 
+    /// Returns the actor's continuous action for `state`.
     pub fn get_action(&mut self, state: &Tensor) -> &Tensor {
         self.actor.forward(state)
     }
 
+    /// Stores the transition and, once the buffer has enough data, performs a DDPG update.
+    ///
+    /// Each update:
+    /// 1. Draws a random mini-batch.
+    /// 2. Updates the critic with the Bellman target.
+    /// 3. Updates the actor by ascending the critic's action-value gradient.
+    /// 4. Soft-updates both target networks.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor, reward: f32, final_state: bool) {
         self.memory.add_item(MdpTransition {
             s0: state.clone(),

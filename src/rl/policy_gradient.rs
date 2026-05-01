@@ -2,13 +2,31 @@ use crate::clab::tensor::{Tensor, Init};
 use crate::core::neural_network::NeuralNetwork;
 use crate::core::optimizer::Optimizer;
 
+/// REINFORCE-style policy gradient component used inside actor-critic agents.
+///
+/// `PolicyGradient` maintains a stochastic actor network π(a|s) and updates it using
+/// the policy gradient theorem:
+///
+/// ```text
+/// ∇J ∝ −δ · ∇ log π(a|s)
+/// ```
+///
+/// where `δ` is a scalar advantage signal supplied by a critic (TD error, Q-value, etc.).
+/// The gradient of `log π` is approximated as `δ / π(a|s)` for the selected action `a`.
 pub struct PolicyGradient {
+    /// Actor network π(a|s); output should be a probability distribution (Softmax activation).
     pub network: NeuralNetwork,
+    /// Optimizer used to update the actor's parameters.
     pub optimizer: Box<dyn Optimizer>,
+    /// Reusable buffer for the per-step policy gradient loss tensor.
     pub loss: Tensor,
 }
 
 impl PolicyGradient {
+    /// Creates a new policy gradient actor.
+    ///
+    /// - `network`: actor network with Softmax output.
+    /// - `optimizer`: parameter update rule.
     pub fn new(network: NeuralNetwork, optimizer: Box<dyn Optimizer>) -> Self {
         PolicyGradient {
             network,
@@ -17,12 +35,19 @@ impl PolicyGradient {
         }
     }
 
+    /// Updates the actor with one policy gradient step.
+    ///
+    /// - `state`: current observation.
+    /// - `action`: one-hot tensor encoding the action taken.
+    /// - `delta`: scalar advantage from the critic (shape `[1, 1]`); positive values
+    ///   increase the probability of `action`, negative values decrease it.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, delta: &Tensor) {
         let mut loss = self.loss_function(state, action, delta);
         self.network.backward(&mut loss);
         self.optimizer.update(&mut self.network);
     }
 
+    /// Returns the actor's output probabilities for the given `state`.
     pub fn get_action(&mut self, state: &Tensor) -> Tensor {
         self.network.forward(state).clone()
     }

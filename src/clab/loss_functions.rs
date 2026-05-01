@@ -68,3 +68,74 @@ impl LossFunction for MseFunction {
         gradient
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clab::tensor::Tensor;
+
+    // ── MSE ───────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn mse_forward_zero_on_perfect_prediction() {
+        let pred = Tensor::from_data(vec![1, 3], vec![1.0, 2.0, 3.0]);
+        let target = Tensor::from_data(vec![1, 3], vec![1.0, 2.0, 3.0]);
+        assert!((MseFunction.forward(&pred, &target)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn mse_forward_known_value() {
+        // batch=1, errors=[1, 2]: MSE = (1² + 2²) / (2*1) = 5/2 = 2.5
+        let pred = Tensor::from_data(vec![1, 2], vec![2.0, 4.0]);
+        let target = Tensor::from_data(vec![1, 2], vec![1.0, 2.0]);
+        assert!((MseFunction.forward(&pred, &target) - 2.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn mse_backward_gradient_is_diff_over_batch() {
+        let pred = Tensor::from_data(vec![2, 2], vec![3.0, 1.0, 5.0, 2.0]);
+        let target = Tensor::from_data(vec![2, 2], vec![1.0, 1.0, 3.0, 2.0]);
+        let grad = MseFunction.backward(&pred, &target);
+        // gradient = (pred - target) / batch_size
+        assert!((grad.data[0] - 1.0).abs() < 1e-6); // (3-1)/2
+        assert!((grad.data[1] - 0.0).abs() < 1e-6); // (1-1)/2
+        assert!((grad.data[2] - 1.0).abs() < 1e-6); // (5-3)/2
+        assert!((grad.data[3] - 0.0).abs() < 1e-6); // (2-2)/2
+    }
+
+    // ── SoftmaxCrossEntropy ───────────────────────────────────────────────────
+
+    #[test]
+    fn sce_forward_near_zero_on_confident_correct_prediction() {
+        // Large positive logit for correct class → softmax ≈ 1 → CE ≈ 0
+        let pred = Tensor::from_data(vec![1, 3], vec![10.0, 0.0, 0.0]);
+        let target = Tensor::from_data(vec![1, 3], vec![1.0, 0.0, 0.0]);
+        assert!(SoftmaxCrossEntropyFunction.forward(&pred, &target) < 0.01);
+    }
+
+    #[test]
+    fn sce_forward_high_on_wrong_class() {
+        // Large positive logit for wrong class → high CE
+        let pred = Tensor::from_data(vec![1, 3], vec![0.0, 10.0, 0.0]);
+        let target = Tensor::from_data(vec![1, 3], vec![1.0, 0.0, 0.0]);
+        assert!(SoftmaxCrossEntropyFunction.forward(&pred, &target) > 5.0);
+    }
+
+    #[test]
+    fn sce_backward_shape_matches_input() {
+        let pred = Tensor::from_data(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        let target = Tensor::from_data(vec![2, 3], vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0]);
+        let grad = SoftmaxCrossEntropyFunction.backward(&pred, &target);
+        assert_eq!(grad.shape, vec![2, 3]);
+    }
+
+    #[test]
+    fn sce_backward_sums_near_zero_per_row() {
+        // (softmax(z) - y) sums to 0 for any one-hot y, before the /batch division
+        let pred = Tensor::from_data(vec![1, 4], vec![1.0, 2.0, 3.0, 4.0]);
+        let target = Tensor::from_data(vec![1, 4], vec![0.0, 0.0, 1.0, 0.0]);
+        let grad = SoftmaxCrossEntropyFunction.backward(&pred, &target);
+        let row_sum: f32 = grad.data.iter().sum();
+        assert!(row_sum.abs() < 1e-6, "per-row gradient sum should be ~0, got {row_sum}");
+    }
+}

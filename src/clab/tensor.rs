@@ -407,3 +407,138 @@ impl fmt::Display for Tensor {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Construction ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn from_data_roundtrip() {
+        let t = Tensor::from_data(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        assert_eq!(t.shape, vec![2, 3]);
+        assert_eq!(t.size, 6);
+        assert_eq!(t.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn value_fills_constant() {
+        let t = Tensor::value(vec![2, 2], 3.14);
+        assert!(t.data.iter().all(|&x| (x - 3.14).abs() < 1e-6));
+    }
+
+    #[test]
+    fn identity_init() {
+        let t = Tensor::with_shape(vec![3, 3], Init::Identity);
+        for i in 0..3 {
+            for j in 0..3 {
+                let expected = if i == j { 1.0 } else { 0.0 };
+                assert_eq!(t.data[i * 3 + j], expected);
+            }
+        }
+    }
+
+    // ── Indexing ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn get_set_2d() {
+        let mut t = Tensor::with_shape(vec![3, 4], Init::Zero);
+        t.set(vec![1, 2], 7.0);
+        assert_eq!(t.get(vec![1, 2]), 7.0);
+        assert_eq!(t.get(vec![0, 0]), 0.0);
+    }
+
+    // ── Reshape ───────────────────────────────────────────────────────────────
+
+    #[test]
+    fn reshape_preserves_data() {
+        let mut t = Tensor::from_data(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        t.reshape(vec![3, 2]);
+        assert_eq!(t.shape, vec![3, 2]);
+        assert_eq!(t.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    // ── max_index semantics (critical invariant) ──────────────────────────────
+
+    #[test]
+    fn max_index_dim0_returns_per_row_col_index() {
+        // Shape [2, 3]: row 0 max at col 2, row 1 max at col 0
+        let t = Tensor::from_data(vec![2, 3], vec![1.0, 2.0, 5.0, 9.0, 3.0, 4.0]);
+        let idx = t.max_index(0);
+        assert_eq!(idx, vec![2, 0], "max_index(0) must return column indices per row");
+    }
+
+    #[test]
+    fn max_index_dim1_returns_per_col_row_index() {
+        // Shape [3, 2]: col 0 max at row 2, col 1 max at row 0
+        let t = Tensor::from_data(vec![3, 2], vec![1.0, 9.0, 4.0, 3.0, 7.0, 2.0]);
+        let idx = t.max_index(1);
+        assert_eq!(idx, vec![2, 0], "max_index(1) must return row indices per column");
+    }
+
+    #[test]
+    fn max_index_rank1() {
+        let t = Tensor::from_data(vec![4], vec![0.1, 0.7, 0.05, 0.15]);
+        assert_eq!(t.max_index(0), vec![1]);
+    }
+
+    // ── gather ────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn gather_picks_correct_flat_indices() {
+        let t = Tensor::from_data(vec![2, 3], vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0]);
+        // flat index 2 → 30.0, flat index 4 → 50.0
+        let g = t.gather(&[2, 4]);
+        assert_eq!(g.data, vec![30.0, 50.0]);
+    }
+
+    // ── concat ────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn concat_rows_dim0() {
+        let a = Tensor::from_data(vec![1, 3], vec![1.0, 2.0, 3.0]);
+        let b = Tensor::from_data(vec![2, 3], vec![4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+        let c = Tensor::concat(&[&a, &b], 0);
+        assert_eq!(c.shape, vec![3, 3]);
+        assert_eq!(c.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+    }
+
+    #[test]
+    fn concat_cols_dim1() {
+        let a = Tensor::from_data(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]);
+        let b = Tensor::from_data(vec![2, 1], vec![5.0, 6.0]);
+        let c = Tensor::concat(&[&a, &b], 1);
+        assert_eq!(c.shape, vec![2, 3]);
+        assert_eq!(c.data, vec![1.0, 2.0, 5.0, 3.0, 4.0, 6.0]);
+    }
+
+    // ── max / min / mean ──────────────────────────────────────────────────────
+
+    #[test]
+    fn max_min_correct() {
+        let t = Tensor::from_data(vec![2, 2], vec![-1.0, 3.0, 0.5, 2.0]);
+        assert_eq!(t.max(), 3.0);
+        assert_eq!(t.min(), -1.0);
+    }
+
+    #[test]
+    fn mean_dim0_averages_columns() {
+        // Shape [2, 2]: column means are [(1+3)/2, (2+4)/2] = [2, 3]
+        let t = Tensor::from_data(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]);
+        let m = t.mean(0);
+        assert_eq!(m.shape, vec![2, 1]);
+        assert!((m.data[0] - 1.5).abs() < 1e-6); // row 0 mean
+        assert!((m.data[1] - 3.5).abs() < 1e-6); // row 1 mean
+    }
+
+    // ── zero_like ─────────────────────────────────────────────────────────────
+
+    #[test]
+    fn zero_like_matches_shape() {
+        let t = Tensor::from_data(vec![3, 4], vec![1.0; 12]);
+        let z = Tensor::zero_like(&t);
+        assert_eq!(z.shape, vec![3, 4]);
+        assert!(z.data.iter().all(|&x| x == 0.0));
+    }
+}

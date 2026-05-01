@@ -4,13 +4,16 @@
 /// scheduler) and pass the returned value to [`Optimizer::set_lr`](super::optimizer::Optimizer::set_lr).
 ///
 /// # Example
-/// ```rust,ignore
-/// let mut sched = CosineAnnealing::new(1e-3, 1e-5, epochs);
-/// for epoch in 0..epochs {
-///     // … training loop …
-///     let lr = sched.step();
-///     opt.set_lr(lr);
+/// ```
+/// use asteria::core::lr_scheduler::{LinearDecay, LrScheduler};
+/// let epochs = 100usize;
+/// let mut sched = LinearDecay::new(1e-3, 1e-5, epochs);
+/// let lr0 = sched.step();
+/// assert!((lr0 - 1e-3_f32).abs() < 1e-6, "first step should return lr_start");
+/// for _epoch in 1..epochs {
+///     sched.step(); // pass to optimizer.set_lr(…)
 /// }
+/// assert!(sched.current_lr() < 1e-3, "lr should have decayed");
 /// ```
 pub trait LrScheduler {
     /// Advances the internal step counter and returns the new learning rate.

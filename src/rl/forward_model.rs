@@ -3,16 +3,36 @@ use crate::clab::loss_functions::{MseFunction, LossFunction};
 use crate::core::neural_network::NeuralNetwork;
 use crate::core::optimizer::Optimizer;
 
+/// World model that predicts the next state given a `(state, action)` pair.
+///
+/// `ForwardModel` is trained to minimise the MSE between its predicted next state and the
+/// actual observed next state. It produces intrinsic curiosity rewards proportional to its
+/// own prediction error: novel (hard-to-predict) transitions yield higher intrinsic reward.
+///
+/// The intrinsic reward is computed as `tanh(MSE)`, which bounds the signal to `[0, 1)`.
+/// Combine with extrinsic reward to encourage exploration: see [`Metacritic`](crate::rl::metacritic::Metacritic)
+/// for a variant that also predicts its own error.
 pub struct ForwardModel {
+    /// Network fˆ(s, a) → sˆ'; input is the concatenation of state and action.
     pub network: NeuralNetwork,
+    /// Optimizer used to update the forward model's parameters.
     pub optimizer: Box<dyn Optimizer>,
+    /// Reusable input buffer for the concatenated `[state, action]` tensor.
     pub input: Tensor,
+    /// Per-row MSE between predicted and actual next state (shape `[batch, 1]`).
     pub error: Tensor,
+    /// Intrinsic reward tensor derived from `error` via `tanh` (same shape as `error`).
     pub reward: Tensor,
+    /// MSE loss function used for both training and error computation.
     pub loss_function: MseFunction,
 }
 
 impl ForwardModel {
+    /// Creates a new forward model.
+    ///
+    /// - `network`: a network whose input dimension equals `state_dim + action_dim` and
+    ///   output dimension equals `state_dim`.
+    /// - `optimizer`: parameter update rule.
     pub fn new(network: NeuralNetwork, optimizer: Box<dyn Optimizer>) -> Self {
         ForwardModel {
             network,
@@ -24,6 +44,7 @@ impl ForwardModel {
         }
     }
 
+    /// Trains the model on one `(state, action, next_state)` transition.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor) {
         let input = Tensor::concat(&[state, action], 1);
         let predicted_state = self.network.forward(&input).clone();
@@ -32,6 +53,10 @@ impl ForwardModel {
         self.optimizer.update(&mut self.network);
     }
 
+    /// Returns the intrinsic reward for a `(state, action, next_state)` transition.
+    ///
+    /// Computed as `tanh(per-dimension-MSE)` for each output dimension, bounding the
+    /// signal to `[0, 1)`. High prediction error → high intrinsic reward.
     pub fn reward(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor) -> &Tensor {
         let error = self.error(state, action, next_state).clone();
         self.reward.resize(vec![1, error.size], Init::Zero);
@@ -41,6 +66,10 @@ impl ForwardModel {
         &self.reward
     }
 
+    /// Returns the per-row prediction MSE for a `(state, action, next_state)` triple.
+    ///
+    /// Shape: `[batch, 1]`. Used internally by [`Metacritic`](crate::rl::metacritic::Metacritic)
+    /// as a training target.
     pub fn error(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor) -> &Tensor {
         let input = Tensor::concat(&[state, action], 1);
         let predicted_state = self.network.forward(&input).clone();

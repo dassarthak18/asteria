@@ -3,17 +3,41 @@ use crate::core::neural_network::NeuralNetwork;
 use crate::core::optimizer::Optimizer;
 use crate::rl::replay_buffer::{ReplayBuffer, MdpTransition};
 
+/// Advantage Actor-Critic with mini-batch updates (A2C).
+///
+/// `AC2` is the batched variant of [`AC`](crate::rl::ac::AC). Rather than updating after
+/// every transition, it accumulates `batch_size` transitions in a local buffer and then
+/// performs a single vectorised actor-critic update:
+///
+/// - **Critic**: minimises `(V(s) − target)²` where `target = r + γ·V(s')`.
+/// - **Actor**: maximises `Σ A(s,a) · log π(a|s)` where advantage `A = target − V(s)`.
+///
+/// A2C is synchronous (single-threaded). For the asynchronous multi-worker variant
+/// see [`AC3`](crate::rl::ac3::AC3).
 pub struct AC2 {
+    /// Actor network π(a|s); output should be a probability distribution (Softmax activation).
     pub actor: NeuralNetwork,
+    /// Value critic network V(s); output should be a single scalar (Linear activation).
     pub critic: NeuralNetwork,
+    /// Optimizer used to update the actor.
     pub actor_optimizer: Box<dyn Optimizer>,
+    /// Optimizer used to update the critic.
     pub critic_optimizer: Box<dyn Optimizer>,
+    /// Discount factor γ ∈ [0, 1].
     pub gamma: f32,
+    /// Number of transitions to accumulate before each update.
     pub batch_size: usize,
+    /// Local rollout buffer; cleared after each update.
     pub memory: ReplayBuffer<MdpTransition>,
 }
 
 impl AC2 {
+    /// Creates a new A2C agent.
+    ///
+    /// - `actor` / `actor_optimizer`: policy network and its update rule.
+    /// - `critic` / `critic_optimizer`: value network and its update rule.
+    /// - `gamma`: discount factor.
+    /// - `batch_size`: rollout length before each update step.
     pub fn new(
         actor: NeuralNetwork,
         actor_optimizer: Box<dyn Optimizer>,
@@ -33,10 +57,14 @@ impl AC2 {
         }
     }
 
+    /// Returns the actor's action probability distribution for `state`.
     pub fn get_action(&mut self, state: &Tensor) -> Tensor {
         self.actor.forward(state).clone()
     }
 
+    /// Adds the transition to the rollout buffer and triggers an update when `batch_size` is reached.
+    ///
+    /// The buffer is cleared after each update, so the agent always trains on fresh on-policy data.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor, reward: f32, final_state: bool) {
         self.memory.add_item(MdpTransition {
             s0: state.clone(),
@@ -74,7 +102,7 @@ impl AC2 {
 
         let v_values = self.critic.forward(&batch_state).clone();
         let v_next_values = self.critic.forward(&Tensor::concat(&next_states, 0)).clone();
-        
+
         let mut targets = Tensor::with_shape_val(vec![n, 1], 0.0);
         let mut advantages = Tensor::with_shape_val(vec![n, 1], 0.0);
         for i in 0..n {
@@ -92,15 +120,15 @@ impl AC2 {
 
         let probs = self.actor.forward(&batch_state).clone();
         let mut actor_delta = Tensor::with_shape_val(probs.shape.clone(), 0.0);
-        
+
         for i in 0..n {
             let act_idx = transitions[i].a.max_index(0)[0];
             let prob = probs.get(vec![i, act_idx]);
             let adv = advantages.get(vec![i, 0]);
-            
+
             actor_delta.set(vec![i, act_idx], -adv / (prob + 1e-8) / n as f32);
         }
-        
+
         self.actor.backward(&mut actor_delta);
         self.actor_optimizer.update(&mut self.actor);
     }
