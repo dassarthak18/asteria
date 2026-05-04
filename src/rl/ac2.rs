@@ -100,8 +100,10 @@ impl AC2 {
 
         let batch_state = Tensor::concat(&states, 0);
 
-        let v_values = self.critic.forward(&batch_state).clone();
+        // next_states forward first so that batch_state is the last forward,
+        // keeping the correct cached inputs for the critic backward pass.
         let v_next_values = self.critic.forward(&Tensor::concat(&next_states, 0)).clone();
+        let v_values = self.critic.forward(&batch_state).clone();
 
         let mut targets = Tensor::with_shape_val(vec![n, 1], 0.0);
         let mut advantages = Tensor::with_shape_val(vec![n, 1], 0.0);

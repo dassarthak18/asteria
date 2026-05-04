@@ -63,9 +63,12 @@ impl Qlearning {
         self.optimizer.update(&mut self.network);
     }
 
-    /// Returns the TD error from the most recent update (shape `[1, 1]`).
+    /// Returns the TD error `Q(s,a) − target` from the most recent update (shape `[1, 1]`).
     ///
-    /// [`QAC`](crate::rl::qac::QAC) uses this value as the advantage signal for its actor.
+    /// Follows the same sign convention as [`TD::delta`](crate::rl::td::TD::delta):
+    /// positive when Q overestimates the target (action worse than expected); negative when
+    /// Q underestimates (action better than expected). [`QAC`](crate::rl::qac::QAC) uses
+    /// this value as the advantage signal for its actor.
     pub fn delta(&self) -> &Tensor {
         &self.delta
     }
@@ -78,14 +81,15 @@ impl Qlearning {
         self.loss = Tensor::value(q_values.shape.clone(), 0.0);
 
         let index = action.max_index(0)[0];
-
-        self.delta.set(vec![0, 0], q_values.get(vec![0, index]));
-
-        if final_state {
-            self.loss.set(vec![0, index], q_values.get(vec![0, index]) - reward);
+        let q_sa = q_values.get(vec![0, index]);
+        let td_error = if final_state {
+            q_sa - reward
         } else {
-            self.loss.set(vec![0, index], q_values.get(vec![0, index]) - (reward + self.gamma * max_q_value));
-        }
+            q_sa - (reward + self.gamma * max_q_value)
+        };
+        self.loss.set(vec![0, index], td_error);
+        // Actor advantage uses same sign convention as TD: positive loss = overestimate = reduce prob.
+        self.delta.set(vec![0, 0], td_error);
 
         self.loss.clone()
     }

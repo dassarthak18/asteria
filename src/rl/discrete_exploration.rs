@@ -76,11 +76,14 @@ impl DiscreteExploration {
     }
 
     fn explore_boltzman(&self, output: &mut Tensor, values: &Tensor) {
+        let max_val = (0..values.size())
+            .map(|i| values.get(vec![i]))
+            .fold(f32::NEG_INFINITY, f32::max);
         let mut evals = Tensor::value(vec![values.size()], 0.0);
         let mut sum = 0.0;
 
         for i in 0..values.size() {
-            let val = (values.get(vec![i]) / self.param).exp();
+            let val = ((values.get(vec![i]) - max_val) / self.param).exp();
             evals.set(vec![i], val);
             sum += val;
         }

@@ -258,7 +258,10 @@ impl Tensor {
         self.data.iter().fold(f32::INFINITY, |a, &b| a.min(b))
     }
 
-    /// Averages elements along `dim`; returns a tensor with that dimension collapsed to 1.
+    /// Averages across the axis perpendicular to `dim` and returns the result.
+    ///
+    /// - `dim = 0`: averages each row across its columns; returns shape `[rows, 1]`.
+    /// - `dim = 1`: averages each column across its rows; returns shape `[1, cols]`.
     pub fn mean(&self, dim: usize) -> Tensor {
         if self.rank == 1 {
             let sum: f32 = self.data.iter().sum();
@@ -523,13 +526,14 @@ mod tests {
     }
 
     #[test]
-    fn mean_dim0_averages_columns() {
-        // Shape [2, 2]: column means are [(1+3)/2, (2+4)/2] = [2, 3]
+    fn mean_dim0_per_row_mean() {
+        // Shape [2, 2]: mean(0) averages each row across its columns.
+        // Row 0 mean: (1+2)/2 = 1.5, row 1 mean: (3+4)/2 = 3.5
         let t = Tensor::from_data(vec![2, 2], vec![1.0, 2.0, 3.0, 4.0]);
         let m = t.mean(0);
         assert_eq!(m.shape, vec![2, 1]);
-        assert!((m.data[0] - 1.5).abs() < 1e-6); // row 0 mean
-        assert!((m.data[1] - 3.5).abs() < 1e-6); // row 1 mean
+        assert!((m.data[0] - 1.5).abs() < 1e-6);
+        assert!((m.data[1] - 3.5).abs() < 1e-6);
     }
 
     // ── zero_like ─────────────────────────────────────────────────────────────

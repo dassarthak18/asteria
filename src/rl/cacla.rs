@@ -60,10 +60,15 @@ impl CACLA {
     /// Performs one CACLA update step.
     ///
     /// The critic is updated unconditionally. The actor is updated only if the TD error
-    /// `δ > 0`, nudging the actor output toward the executed `action`.
+    /// `δ > 0` (actual return exceeded the critic's prediction), nudging the actor output
+    /// toward the executed `action`.
+    ///
+    /// The internal TD module stores the loss gradient `V(s) − target`, which is the
+    /// negation of the standard TD error `δ = r + γV(s′) − V(s)`. The positive-δ
+    /// condition therefore corresponds to a *negative* stored value.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, next_state: &Tensor, reward: f32, final_state: bool) {
         self.critic.train(state, next_state, reward, final_state);
-        if self.critic.delta().get(vec![0, 0]) > 0.0 {
+        if self.critic.delta().get(vec![0, 0]) < 0.0 {
             let mut loss = self.actor_loss_function(state, action);
             self.actor.backward(&mut loss);
             self.actor_optimizer.update(&mut self.actor);

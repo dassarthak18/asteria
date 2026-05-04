@@ -4,6 +4,7 @@ use crate::core::optimizer::Optimizer;
 use crate::rl::ienvironment::IEnvironment;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use rand::RngExt;
 
 /// Asynchronous Advantage Actor-Critic (A3C).
 ///
@@ -80,12 +81,23 @@ impl AC3 {
 
                 println!("Worker {} started", i);
 
+                let mut rng = rand::rng();
                 for _ in 0..100 {
                     env.reset();
                     while !env.is_finished() {
                         let s0 = env.get_state();
                         let probs = local_actor.forward(&s0).clone();
-                        let action_idx = probs.max_index(0)[0];
+                        // Sample from the policy distribution (provides natural exploration).
+                        let r: f32 = rng.random();
+                        let mut cumulative = 0.0;
+                        let action_idx = {
+                            let mut chosen = probs.size() - 1;
+                            for k in 0..probs.size() {
+                                cumulative += probs.data[k];
+                                if r < cumulative { chosen = k; break; }
+                            }
+                            chosen
+                        };
                         let mut action = Tensor::with_shape_val(vec![probs.size()], 0.0);
                         action.set(vec![action_idx], 1.0);
 

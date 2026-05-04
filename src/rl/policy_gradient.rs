@@ -39,8 +39,11 @@ impl PolicyGradient {
     ///
     /// - `state`: current observation.
     /// - `action`: one-hot tensor encoding the action taken.
-    /// - `delta`: scalar advantage from the critic (shape `[1, 1]`); positive values
-    ///   increase the probability of `action`, negative values decrease it.
+    /// - `delta`: loss-gradient convention, consistent with the critic's own backward signal.
+    ///   **Negative** delta increases the probability of `action` (action was better than
+    ///   expected); positive delta decreases it. The [`TD`](crate::rl::td::TD) critic returns
+    ///   `V(s) − target`, which is negative when the action was good — this convention is
+    ///   used throughout the codebase.
     pub fn train(&mut self, state: &Tensor, action: &Tensor, delta: &Tensor) {
         let mut loss = self.loss_function(state, action, delta);
         self.network.backward(&mut loss);
