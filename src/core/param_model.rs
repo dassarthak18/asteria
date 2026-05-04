@@ -21,6 +21,7 @@ impl ParamModel {
         }
     }
 
+    /// Allocates and registers a new parameter with the given `shape`.
     pub fn add_param(&mut self, shape: Vec<usize>) -> Arc<Mutex<Param>> {
         let mut p = Param::new(shape);
         p.id = format!("param_{}", self.next_id);
@@ -30,6 +31,7 @@ impl ParamModel {
         arc
     }
 
+    /// Registers an existing parameter reference (e.g. for weight sharing).
     pub fn add_existing_param(&mut self, param: Arc<Mutex<Param>>) {
         let id = param.lock().unwrap().id.clone();
         self.model.insert(id, param);

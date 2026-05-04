@@ -26,6 +26,8 @@ pub struct Adam {
 
 impl Adam {
     /// Creates an Adam optimizer with the given learning rate and sensible defaults.
+    ///
+    /// Defaults: `weight_decay=0.0`, `beta1=0.9`, `beta2=0.999`, `epsilon=1e-8`.
     pub fn new(alpha: f32) -> Self {
         Adam {
             alpha,

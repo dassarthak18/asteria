@@ -1,8 +1,12 @@
 use crate::clab::tensor::Tensor;
 
+/// Low-level mathematical operations on [`Tensor`] buffers.
+///
+/// Most operations support broadcasting over a leading batch dimension.
 pub struct TensorOperator;
 
 impl TensorOperator {
+    /// Element-wise addition: `z = x + y`. Supports broadcasting.
     pub fn add(x: &Tensor, y: &Tensor, z: &mut Tensor) {
         if x.size == y.size && x.size == z.size {
             for i in 0..x.size {
@@ -15,12 +19,14 @@ impl TensorOperator {
         }
     }
 
+    /// Adds a scalar to every element: `z = x + y`.
     pub fn const_add(x: &Tensor, y: f32, z: &mut Tensor) {
         for i in 0..x.size {
             z.data[i] = x.data[i] + y;
         }
     }
 
+    /// Element-wise subtraction: `z = x - y`. Supports broadcasting.
     pub fn sub(x: &Tensor, y: &Tensor, z: &mut Tensor) {
         if x.size == y.size && x.size == z.size {
             for i in 0..x.size {
@@ -33,18 +39,24 @@ impl TensorOperator {
         }
     }
 
+    /// Subtracts a scalar from every element: `z = x - y`.
     pub fn const_sub(x: &Tensor, y: f32, z: &mut Tensor) {
         for i in 0..x.size {
             z.data[i] = x.data[i] - y;
         }
     }
 
+    /// Subtracts every element from a scalar: `z = x - y`.
     pub fn const_sub_lhs(x: f32, y: &Tensor, z: &mut Tensor) {
         for i in 0..y.size {
             z.data[i] = x - y.data[i];
         }
     }
 
+    /// Matrix multiplication: `z = x * y`.
+    ///
+    /// Respects the `transpose_flag` of both `x` and `y` to perform $(AB,\ A^TB,\ AB^T,\ A^TB^T)$
+    /// without physical buffer transpositions. `z` is automatically resized to the correct dimensions.
     pub fn mul(x: &Tensor, y: &Tensor, z: &mut Tensor) {
         let (rows, common, cols) = if !x.transpose_flag && !y.transpose_flag {
             (x.shape[0], x.shape[1], y.shape[1])
@@ -66,18 +78,21 @@ impl TensorOperator {
         }
     }
 
+    /// Multiplies every element by a scalar: `z = x * y`.
     pub fn const_mul(x: &Tensor, y: f32, z: &mut Tensor) {
         for i in 0..x.size {
             z.data[i] = x.data[i] * y;
         }
     }
 
+    /// Divides a scalar by every element: `z = x / y`.
     pub fn const_div(x: f32, y: &Tensor, z: &mut Tensor) {
         for i in 0..y.size {
             z.data[i] = x / y.data[i];
         }
     }
 
+    /// Sums elements along the batch axis (dimension 0).
     pub fn reduce_sum(x: &Tensor, y: &mut Tensor) {
         if x.shape[0] > 1 {
             let y_size = x.size / x.shape[0];

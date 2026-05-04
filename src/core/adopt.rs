@@ -27,6 +27,8 @@ pub struct ADOPT {
 
 impl ADOPT {
     /// Creates an ADOPT optimizer with the given learning rate and sensible defaults.
+    ///
+    /// Defaults: `beta1=0.9`, `beta2=0.9999`, `epsilon=1e-6`, `weight_decay=0.0`, `clip=true`.
     pub fn new(alpha: f32) -> Self {
         ADOPT {
             alpha,

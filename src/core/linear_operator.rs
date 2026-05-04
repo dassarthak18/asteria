@@ -3,13 +3,21 @@ use crate::clab::tensor_operator::TensorOperator;
 use crate::core::param::Param;
 use std::sync::{Arc, Mutex};
 
+/// A neural network operator that performs a linear transformation: $y = xW + b$.
+///
+/// It encapsulates references to shared weight and bias parameters and handles the
+/// accumulation of gradients during backpropagation.
 pub struct LinearOperator {
+    /// Reference to the weight matrix $[d_{in}, d_{out}]$.
     pub weights: Arc<Mutex<Param>>,
+    /// Reference to the bias vector $[d_{out}]$.
     pub bias: Arc<Mutex<Param>>,
+    /// Cached input from the last forward pass, required for gradient calculation.
     pub input: Option<Tensor>,
 }
 
 impl LinearOperator {
+    /// Creates a operator linked to the provided parameters.
     pub fn new(weights: Arc<Mutex<Param>>, bias: Arc<Mutex<Param>>) -> Self {
         LinearOperator {
             weights,
@@ -18,6 +26,7 @@ impl LinearOperator {
         }
     }
 
+    /// Computes $y = xW + b$.
     pub fn forward(&mut self, input: &Tensor) -> Tensor {
         self.input = Some(input.clone());
         let weights = self.weights.lock().unwrap();
@@ -31,6 +40,7 @@ impl LinearOperator {
         final_output
     }
 
+    /// Computes gradients $\partial L/\partial W$ and $\partial L/\partial b$ and returns upstream delta $\partial L/\partial x$.
     pub fn backward(&mut self, delta: &Tensor) -> Tensor {
         let input = self.input.as_ref().expect("Forward must be called before backward");
         let mut weights = self.weights.lock().unwrap();

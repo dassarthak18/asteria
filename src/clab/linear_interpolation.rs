@@ -1,12 +1,19 @@
 use crate::clab::Interpolation;
 
+/// Linear interpolation between two points over a fixed interval.
+///
+/// Follows the form $f(t) = (1 - \frac{t}{T})p_1 + \frac{t}{T}p_2$, where $T$ is the interval.
 pub struct LinearInterpolation {
+    /// Starting value.
     pub point1: f32,
+    /// Target value reached at `t = interval`.
     pub point2: f32,
+    /// Duration of the transition.
     pub interval: i32,
 }
 
 impl LinearInterpolation {
+    /// Creates a new linear interpolation.
     pub fn new(point1: f32, point2: f32, interval: i32) -> Self {
         LinearInterpolation {
             point1,
