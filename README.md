@@ -11,6 +11,7 @@
 - [What Asteria Adds over Coeus](#what-asteria-adds-over-coeus)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
+  - [Official Cargo Crate](#official-cargo-crate)
   - [Your First Network (XOR)](#your-first-network-xor)
   - [Your First RL Agent (Maze)](#your-first-rl-agent-maze)
 - [External Dependencies](#external-dependencies)
@@ -98,9 +99,7 @@ This section is for newcomers: people who know Python and maybe some PyTorch or 
 
 ### Installation
 
-Asteria can be used either as a local path dependency (for development) or directly from crates.io.
-
-#### Option 1: Local path (development)
+Asteria is a library crate. Clone it and use it as a local path dependency:
 
 ```shell
 git clone https://github.com/dassarthak18/asteria.git
@@ -113,16 +112,7 @@ In your `Cargo.toml`:
 asteria = { path = "../asteria" }
 ```
 
-#### Option 2: From crates.io (recommended)
-
-Add this to your Cargo.toml:
-
-```toml
-[dependencies]
-asteria = "1.0.0"
-```
-
-Asteria depends only on `rand` and `rand_distr` as transitive dependencies and has no other external requirements.
+You only need `rand` and `rand_distr` as transitive dependencies — Asteria has no other external requirements.
 
 To run the bundled examples from the repo root:
 
@@ -143,7 +133,23 @@ cargo run --release --example mountain_car
 cargo run --release --example cart_pole
 ```
 
-> Please note that the `mnist`, `iris` and `wine` are supervised examples that require external data files (`iris.data`, `wine.dat`, four MNIST IDX binaries). These files live in `./data/` directory of the official repository and are not bundled with the Cargo crate. All paths are relative to the repo root, so run from there. These examples will not run out of the box if Asteria was installed from the official Cargo crate.
+Data files for the supervised examples (`iris.data`, `wine.dat`, four MNIST IDX binaries) live in `./data/`. All paths are relative to the repo root, so run from there.
+
+### Official Cargo Crate
+
+Alternatively, you can use the official crates.io package. Add to your ``Cargo.toml``:
+
+```toml
+[dependencies]
+asteria = "1.0.0"
+```
+or
+
+```shell
+cargo add asteria
+```
+
+The bundled examples are only available when using the repository directly. They are not included in the published Cargo crate.
 
 ### Your First Network (XOR)
 
