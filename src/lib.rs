@@ -8,6 +8,8 @@
 //! - [`rl`]: environment trait, exploration strategies, and RL algorithms (Q-Learning, SARSA,
 //!   DQN, AC, A2C, A3C, CACLA, DDPG, PPO, QAC, TD, ForwardModel, Metacritic).
 
+#![forbid(unsafe_code)]
+
 pub mod clab;
 pub mod core;
 pub mod rl;
