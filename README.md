@@ -505,6 +505,8 @@ All RL gradient checks use finite-difference numerical differentiation to verify
 
 All results are from `cargo run --release --example <name>` on a single CPU core. LR scheduling is applied in every example. Optimizer: ADOPT throughout. Results represent a single representative run; due to random weight initialization, individual runs may vary slightly.
 
+> Please note that the `mnist`, `iris` and `wine` examples require external datasets available in the repository in the ``data`` directory and will not run out of the box if Asteria was installed from the official Cargo crate.
+
 ### Supervised Learning
 
 #### XOR (`examples/xor.rs`)
