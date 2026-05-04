@@ -98,7 +98,9 @@ This section is for newcomers: people who know Python and maybe some PyTorch or 
 
 ### Installation
 
-Asteria is a library crate. Clone it and use it as a local path dependency:
+Asteria can be used either as a local path dependency (for development) or directly from crates.io.
+
+#### Option 1: Local path (development)
 
 ```shell
 git clone https://github.com/dassarthak18/asteria.git
@@ -111,7 +113,16 @@ In your `Cargo.toml`:
 asteria = { path = "../asteria" }
 ```
 
-You only need `rand` and `rand_distr` as transitive dependencies — Asteria has no other external requirements.
+#### Option 2: From crates.io (recommended)
+
+Add this to your Cargo.toml:
+
+```toml
+[dependencies]
+asteria = "1.0.0"
+```
+
+Asteria depends only on `rand` and `rand_distr` as transitive dependencies and has no other external requirements.
 
 To run the bundled examples from the repo root:
 
@@ -132,7 +143,7 @@ cargo run --release --example mountain_car
 cargo run --release --example cart_pole
 ```
 
-Data files for the supervised examples (`iris.data`, `wine.dat`, four MNIST IDX binaries) live in `./data/`. All paths are relative to the repo root, so run from there.
+> Please note that the `mnist`, `iris` and `wine` are supervised examples that require external data files (`iris.data`, `wine.dat`, four MNIST IDX binaries). These files live in `./data/` directory of the official repository and are not bundled with the Cargo crate. All paths are relative to the repo root, so run from there. These examples will not run out of the box if Asteria was installed from the official Cargo crate.
 
 ### Your First Network (XOR)
 
@@ -504,8 +515,6 @@ All RL gradient checks use finite-difference numerical differentiation to verify
 ## Examples and Benchmarks
 
 All results are from `cargo run --release --example <name>` on a single CPU core. LR scheduling is applied in every example. Optimizer: ADOPT throughout. Results represent a single representative run; due to random weight initialization, individual runs may vary slightly.
-
-> Please note that the `mnist`, `iris` and `wine` examples require external datasets available in the repository in the ``data`` directory and will not run out of the box if Asteria was installed from the official Cargo crate.
 
 ### Supervised Learning
 
