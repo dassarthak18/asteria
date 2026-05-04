@@ -35,8 +35,6 @@
 - [Planned Features](#planned-features)
 - [Acknowledgements](#acknowledgements)
 
----
-
 ## Introduction
 
 Asteria is a 100% safe Rust library for reinforcement learning and neural network training. It accepts environments modelled as discrete-time Markov decision processes $M = (S, A, P, R, \gamma)$, where $S \subseteq \mathbb{R}^m$ is the state space, $A \subseteq \mathbb{R}^n$ is the action space, $P: S \times A \times S \rightarrow [0, 1]$ is the transition kernel, $R: S \times A \rightarrow \mathbb{R}$ is the reward function, and $\gamma \in [0, 1)$ is the discount factor. Policies are represented as neural networks $\pi_\theta: S \rightarrow A$ parameterized by weights $\theta$, trained end-to-end via gradient descent directly against collected experience.
@@ -49,8 +47,6 @@ The library ships:
 - Eleven RL algorithms across discrete and continuous action spaces, plus two intrinsic motivation models.
 - A supervised learning suite (XOR, Iris, Wine, MNIST) reaching up to 98.18% accuracy on MNIST in 10 epochs.
 
----
-
 ## Why Asteria?
 
 If you come from Python-based deep learning (PyTorch, JAX) and OpenAI Gym, you probably know that most RL research tooling is Python-first. So why bother with a Rust library?
@@ -62,8 +58,6 @@ If you come from Python-based deep learning (PyTorch, JAX) and OpenAI Gym, you p
 - **Learning.** Understanding how backpropagation, replay buffers, and actor-critic methods work *without* PyTorch's autograd doing the heavy lifting is genuinely educational.
 
 **When PyTorch + Gym is still the right choice:** large-scale training with GPUs, convolutional networks over pixels, environments from Gymnasium/MuJoCo/ALE, distributed training across machines — none of that is Asteria's territory (yet). Asteria is best suited for CPU-bound RL with low-dimensional state spaces, educational use, and Rust-embedded deployments.
-
----
 
 ## What Asteria Adds over Coeus
 
@@ -97,8 +91,6 @@ Asteria adds or corrects the following relative to Coeus:
 - **CUDA/GPU backend** — Coeus had an optional `CuCLAB` CUDA module; Asteria is CPU-only.
 - **NumPy-format tensor I/O** — Coeus saved tensors (training logs, rewards) as `.npy` via CNPy; Asteria uses a binary f32 format for model weights and does not yet support `.npy`/`.npz`.
 - **Convolutional layers, ALE, MuJoCo** — planned in Coeus, not yet in Asteria either.
-
----
 
 ## Getting Started
 
@@ -265,14 +257,10 @@ for ep in 0..episodes {
 - Exploration is a separate object (`DiscreteExploration`, `ContinuousExploration`) rather than being baked into the environment or the algorithm.
 - Learning rate scheduling is explicit: create a scheduler, call `sched.step()` each episode, and pass the result to `agent.optimizer.set_lr(...)`.
 
----
-
 ## External Dependencies
 
 * [**rand**](https://crates.io/crates/rand) — random number generation and sampling.
 * [**rand\_distr**](https://crates.io/crates/rand_distr) — statistical distributions, including the Normal distribution used in Ornstein-Uhlenbeck noise.
-
----
 
 ## Tensor Engine (CLAB)
 
@@ -300,8 +288,6 @@ let max_q = q_values.gather(&flat);
 ```
 
 No heap allocations occur during a forward or backward pass beyond the initial parameter and gradient tensors.
-
----
 
 ## Neural Network Framework
 
@@ -403,8 +389,6 @@ net.load("model.bin").expect("load failed");
 
 Parameters are written in topologically sorted layer order as little-endian `f32` bytes. The file is portable across machines with the same network architecture.
 
----
-
 ## Reinforcement Learning Algorithms
 
 All algorithms interact with environments through the `IEnvironment` trait. A shared `ReplayBuffer<T>` provides uniform random experience replay for off-policy methods.
@@ -464,8 +448,6 @@ Exploration is handled separately from the learning algorithm:
 | **ForwardModel** | Trains a forward dynamics predictor $\hat{s}' = f_\phi(s, a)$; uses prediction error $\tanh(\|s'-\hat{s}'\|^2)$ as intrinsic reward, bounded to $[0,1)$ |
 | **Metacritic** | Maintains a meta-learner that predicts the forward model's prediction error; rewards when actual error deviates from prediction by more than $\sigma$, encouraging genuinely novel exploration |
 
----
-
 ## Test Suite
 
 `cargo test` runs 42 unit tests and 1 doctest, all passing. Tests are organized across three modules:
@@ -519,8 +501,6 @@ All RL gradient checks use finite-difference numerical differentiation to verify
 
 - `LrScheduler` trait — the `LinearDecay` doctest in `src/core/lr_scheduler.rs` verifies that `step()` returns `lr_start` on the first call and that the rate decays after `total_steps` calls.
 
----
-
 ## Examples and Benchmarks
 
 All results are from `cargo run --release --example <name>` on a single CPU core. LR scheduling is applied in every example. Optimizer: ADOPT throughout. Results represent a single representative run; due to random weight initialization, individual runs may vary slightly.
@@ -537,8 +517,6 @@ All four XOR input pairs as a single batch of size 4. MSE loss. `LinearDecay` LR
 
 > Convergence is stochastic (depends on random initialization). Typical successful runs reach MSE < 0.001 by step 200. On rare initializations a second run may be needed.
 
----
-
 #### Iris (`examples/iris.rs`)
 
 150 samples, 4 features, 3 classes. Min-max normalized. Every 5th sample held out (120 train / 30 test). `CosineAnnealing` LR: $10^{-3} \to 10^{-5}$ over 200 epochs.
@@ -548,8 +526,6 @@ All four XOR input pairs as a single batch of size 4. MSE loss. `LinearDecay` LR
 | 4 → 16 (ReLU) → 3 (Linear) | CosineAnnealing | 16 | 200 | 95.0% | **100.0%** |
 
 Loss: `SoftmaxCrossEntropyFunction`. Converges to 100% test accuracy by epoch 100.
-
----
 
 #### Wine (`examples/wine.rs`)
 
@@ -561,8 +537,6 @@ Loss: `SoftmaxCrossEntropyFunction`. Converges to 100% test accuracy by epoch 10
 
 Loss: `SoftmaxCrossEntropyFunction`. Converges to 100% training and test accuracy by epoch 50. Due to random initialization, occasional runs may misclassify one or two test samples (97–100% range); re-running resolves this.
 
----
-
 #### MNIST (`examples/mnist.rs`)
 
 70,000 handwritten digit images (60k train / 10k test), 784 features, 10 classes. IDX binary format. Pixels normalized to $[0, 1]$. Shuffled each epoch. `CosineAnnealing` LR: $10^{-3} \to 10^{-5}$ over 10 epochs. During training, accuracy is tracked on a 2,000-sample subset for speed; final evaluation uses the full 10,000-sample test set.
@@ -572,8 +546,6 @@ Loss: `SoftmaxCrossEntropyFunction`. Converges to 100% training and test accurac
 | 784 → 128 (ReLU) → 64 (ReLU) → 10 (Linear) | CosineAnnealing | 64 | 10 | **98.18%** |
 
 Loss: `SoftmaxCrossEntropyFunction`. Always run with `--release`; each epoch takes ~1 minute in debug mode.
-
----
 
 ### Discrete Reinforcement Learning
 
@@ -597,8 +569,6 @@ F  F  F  G   (G = goal, H = hazard, W = wall, F = free)
 
 All methods reach near-optimal reward (~0.95) after convergence. The optimal path from start to goal takes 5 steps, giving reward `1.0 − 5 × 0.01 = 0.95`. DQN uses a replay buffer of 10,000, batch size 64, and target network sync every 100 steps.
 
----
-
 #### Maze Policy Gradient (`examples/maze_pg.rs`)
 
 Same 4×4 maze environment. Exercises the four policy-gradient algorithms added in Asteria. 500 training episodes. $\varepsilon$-greedy exploration decaying from 0.5 to 0.05. LR: `LinearDecay` $10^{-3} \to 10^{-4}$ over 500 episodes. A3C uses 4 parallel worker threads, each running 100 episodes independently.
@@ -612,8 +582,6 @@ Same 4×4 maze environment. Exercises the four policy-gradient algorithms added 
 
 A2C and PPO reliably converge to near-optimal reward (~0.95) by episode 100. A3C converges across 400 total worker-episodes. QAC uses a Q-learning critic (off-policy) as an advantage signal for the actor; because Q-learning estimates Q* rather than Q^π, the actor advantage signal can be noisy, leading to slower and noisier convergence than A2C or PPO on this task.
 
----
-
 ### Continuous Reinforcement Learning
 
 #### Simple Continuous Environment (`examples/simple_continuous_env.rs`)
@@ -625,8 +593,6 @@ A2C and PPO reliably converge to near-optimal reward (~0.95) by episode 100. A3C
 | CACLA | 2 → 16 (Tanh) → 16 (Tanh) → 1 (Tanh) / 2 → 16 (Tanh) → 1 (Linear) | 0.99 | 500 | **448/500** |
 
 CACLA reaches the target in 448 out of 500 episodes, demonstrating reliable convergence on this task. Success rate improves rapidly after episode 100.
-
----
 
 #### Mountain Car (`examples/mountain_car.rs`)
 
@@ -643,8 +609,6 @@ Critic architecture for all DDPG variants: (2+1) → 64 (ReLU) → 64 (ReLU) →
 
 CACLA does not solve mountain car: the hill-climbing problem requires temporally coordinated action sequences that CACLA's greedy update cannot discover. DDPG with the forward model consistently solves the task immediately (the intrinsic reward compensates for the sparse extrinsic reward during initial exploration).
 
----
-
 #### CartPole (`examples/cart_pole.rs`)
 
 Continuous cart-pole balancing. State: [x, ẋ, θ, θ̇]. Action: force ∈ [−1, 1] (scaled by 10 N). Episode fails on |x| > 2.4 m, |θ| > 12°, or after 200 steps; reward is −1 on failure, 0 otherwise. LR: `LinearDecay` $10^{-3} \to 10^{-4}$ over 300 episodes.
@@ -659,17 +623,13 @@ Critic for all DDPG variants: (4+1) → 64 (ReLU) → 64 (ReLU) → 1 (Linear). 
 
 An episode reaching 200 steps is considered solved. DDPG with ForwardModel benefits from intrinsic exploration reward early in training, allowing it to discover the balancing policy ~90 episodes sooner than plain DDPG.
 
----
-
 ## Planned Features
 
 The following features are planned for future releases:
 
-**ONNX support.** Export trained networks to `.onnx` format for inference in any ONNX-compatible runtime, and load pre-trained ONNX models for fine-tuning or evaluation. This is the standard interoperability format for neural networks and enables deployment outside the Rust ecosystem.
+* **ONNX support.** Export trained networks to `.onnx` format for inference in any ONNX-compatible runtime, and load pre-trained ONNX models for fine-tuning or evaluation. This is the standard interoperability format for neural networks and enables deployment outside the Rust ecosystem.
 
-**NumPy / CNPy format.** Save and load network parameters as `.npy` / `.npz` archives — the same format supported by [CNPy](https://github.com/rogersce/cnpy) in the original Coeus C++ library. This allows direct exchange of trained weights between Asteria, NumPy, and any Python deep learning framework.
-
----
+* **NumPy / CNPy format.** Save and load network parameters as `.npy` / `.npz` archives — the same format supported by [CNPy](https://github.com/rogersce/cnpy) in the original Coeus C++ library. This allows direct exchange of trained weights between Asteria, NumPy, and any Python deep learning framework.
 
 ## Acknowledgements
 
