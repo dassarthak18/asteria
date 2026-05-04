@@ -6,7 +6,7 @@ description = "Safe Rust. No Deps. RL for the CPU."
 license = "MIT"
 repository = "https://github.com/dassarthak18/asteria"
 readme = "README.md"
-keywords = ["reinforcement-learning", "neural-networks", "rust", "machine-learning"]
+keywords = ["rl", "neural-networks", "rust", "machine-learning"]
 categories = ["science", "algorithms"]
 
 include = [
