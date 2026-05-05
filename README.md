@@ -54,15 +54,13 @@ If you come from Python-based deep learning (PyTorch, JAX) and OpenAI Gym, you p
 
 **The case for Rust RL:**
 - **Zero-overhead abstraction.** No GIL, no garbage collector, no runtime. Inference and training run at full CPU speed without Python interpreter overhead.
-- **Memory safety without sacrificing control.** The borrow checker eliminates whole classes of bugs (dangling pointers, data races) that are common in RL simulation code. All code here is `#![forbid(unsafe_code)]`-equivalent — no `unsafe` blocks anywhere.
+- **Memory safety without sacrificing control.** The borrow checker eliminates whole classes of bugs (dangling pointers, data races) that are common in RL simulation code. All code here is `#![forbid(unsafe_code)]` — no `unsafe` blocks anywhere.
 - **Embeddability.** A compiled Rust library can be linked into games, robotics firmware, or safety-critical applications where CPython is not an option.
 - **Learning.** Understanding how backpropagation, replay buffers, and actor-critic methods work *without* PyTorch's autograd doing the heavy lifting is genuinely educational.
 
-**When PyTorch + Gym is still the right choice:** large-scale training with GPUs, convolutional networks over pixels, environments from Gymnasium/MuJoCo/ALE, distributed training across machines — none of that is Asteria's territory (yet). Asteria is best suited for CPU-bound RL with low-dimensional state spaces, educational use, and Rust-embedded deployments.
+**When PyTorch + Gym is still the right choice:** large-scale training with GPUs, convolutional networks over pixels, environments from Gymnasium/MuJoCo/ALE, distributed training across machines — none of that is Asteria's territory. Asteria is best suited for CPU-bound RL with low-dimensional state spaces, educational use, and Rust-embedded deployments.
 
 ## What Asteria Adds over Coeus
-
-The comparison below is based on direct inspection of the Coeus source code (included in `./Coeus/`).
 
 **What Coeus shipped:** TD, Q-Learning, SARSA, DQN, AC, CACLA, DDPG, ForwardModel (predictive-error model), Metacritic (surprise model), QAC (code present, not listed in Coeus README features), PolicyGradient, SGD (with momentum and Nesterov), Adam, RAdam. Two compute backends: Intel MKL (primary; optimizers use AVX/SIMD intrinsics via `_mm256_load_ps`) and CUDA/cuBLAS (optional `CuCLAB` module). Activations: Linear, Sigmoid, Tanh, TanhExp, ReLU, Softmax. `tensor::save_numpy()` via CNPy for saving training logs and reward tensors to `.npy` format. XOR example in the README; maze, mountain car, and CartPole experiment runners.
 
@@ -650,4 +648,4 @@ The following features are planned for future releases:
 
 ## Acknowledgements
 
-Asteria is a Rust port and extension of [Coeus](https://github.com/Iskandor/Coeus), a C++ reinforcement learning library developed by **Matej Pechac** (Iskandor). The port replaces the C++ backend — which used Intel MKL and optional CUDA/cuBLAS via AVX SIMD intrinsics — with a fully safe, zero-`unsafe` Rust implementation. Algorithmic content is faithfully ported; two bugs confirmed in the Coeus source are corrected (Softmax backward Jacobian and Q-learning delta sign convention). Beyond the port, Asteria extends the original suite with A2C, A3C, and PPO (planned but never shipped in Coeus), introduces ADOPT as a new optimizer, ships a full LR scheduler suite, and adds Iris/Wine/MNIST supervised learning benchmarks. QAC exists in both libraries; Asteria's version corrects the actor-advantage signal.
+Asteria is a Rust port and extension of [Coeus](https://github.com/Iskandor/Coeus), a C++ reinforcement learning library developed by **Matej Pechac** (Iskandor). The port replaces the C++ backend — which used Intel MKL and optional CUDA/cuBLAS via AVX SIMD intrinsics — with a fully safe Rust implementation. Algorithmic content is faithfully ported; two bugs confirmed in the Coeus source are corrected (Softmax backward Jacobian and Q-learning delta sign convention). Beyond the port, Asteria extends the original suite with A2C, A3C, and PPO (planned but never shipped in Coeus), introduces ADOPT as a new optimizer, ships a full LR scheduler suite, and adds Iris/Wine/MNIST supervised learning benchmarks. QAC exists in both libraries; Asteria's version corrects the actor-advantage signal.
